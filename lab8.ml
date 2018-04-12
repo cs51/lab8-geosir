@@ -122,7 +122,9 @@ decide how to implement this.
 ......................................................................*)
                                                    
   let add_listener (evt : 'a event) (listener : 'a -> unit) : id =
-    failwith "WEvent.add_listener not implemented"
+    let id = new_id () in
+    evt := {id = id; action = listener} :: !evt;
+    id
 
 (*......................................................................
 Exercise 2: Write remove_listener, which, given an id and an event,
@@ -131,7 +133,7 @@ one. If there is no listener with that id, do nothing.
 ......................................................................*)
             
   let remove_listener (evt : 'a event) (i : id) : unit =
-    failwith "WEvent.remove_listener not implemented"
+    evt := List.filter (fun e -> e.id <> i) !evt
 
 (*......................................................................
 Exercise 3: Write fire_event, which will execute all event handlers
@@ -139,7 +141,7 @@ listening for the event.
 ......................................................................*)
             
   let fire_event (evt : 'a event) (arg : 'a) : unit =
-    failwith "WEvent.fire_event not implemented"
+    List.fold_left (fun _ x -> x.action arg) () !evt
 
 end
   
@@ -156,7 +158,7 @@ Exercise 4: Given your implementation of Event, create a new event
 called "newswire" that should pass strings to the event handlers.
 ......................................................................*)
   
-let newswire = fun _ -> failwith "newswire not implemented" ;;
+let newswire = WEvent.new_event () ;;
 
 (* News organizations might want to register event listeners to the
 newswire so that they might report on stories. Below are functions
@@ -176,6 +178,9 @@ newswire event.
   
 (* .. *)
 
+let fNNid = WEvent.add_listener newswire fakeNewsNetwork ;;
+let bFid = WEvent.add_listener newswire buzzFake ;;
+
 (* Here are some headlines to play with. *)
 
 let h1 = "the national animal of Eritrea is officially the camel!" ;;
@@ -186,6 +191,10 @@ let h3 = "bactrian camels can weigh up to 2200lbs!" ;;
 Exercise 6: Finally, fire newswire events with the above three
 headlines, and observe what happens!
 ......................................................................*)
+
+let _ = WEvent.fire_event newswire h1 ;;
+let _ = WEvent.fire_event newswire h2 ;;
+let _ = WEvent.fire_event newswire h3 ;;
   
 (* .. *)
 
@@ -202,12 +211,16 @@ Exercise 7: Remove the newswire listeners that were previously registered.
 
 (* .. *)
 
+let _ = WEvent.remove_listener newswire fNNid ;;
+let _ = WEvent.remove_listener newswire bFid ;;
+
+
 (*......................................................................
 Exercise 8: Create a new event called publish to signal that all
 stories should be published. The event should be a unit WEvent.event.
 ......................................................................*)
 
-let publish = fun _ -> failwith "publish not implemented" ;; 
+let publish = WEvent.new_event () ;; 
 
 (*......................................................................
 Exercise 9: Write a function receive_report to handle new news
@@ -218,12 +231,16 @@ by registering appropriate listeners, one for each news network,
 waiting for the publish event.
 ......................................................................*)
 
-let receive_report = fun _ -> failwith "report not implemented";;
+let receive_report (outlet : string -> unit) (h : string) : unit =
+  let _ = WEvent.add_listener publish (fun () -> outlet h) in ()
 
 (*......................................................................
 Exercise 10: Register the receieve_report listener to listen for the
 newswire event.
 ......................................................................*)
+
+let _ = WEvent.add_listener newswire (receive_report fakeNewsNetwork) ;;
+let _ = WEvent.add_listener newswire (receive_report buzzFake) ;;
 
 (* .. *)
 
@@ -240,6 +257,10 @@ the news. (They've just queued up a bunch of listeners on the publish
 event instead.)
 ......................................................................*)
 
+let _ = WEvent.fire_event newswire h4 ;;
+let _ = WEvent.fire_event newswire h5 ;;
+let _ = WEvent.fire_event newswire h6 ;;
+
 (* .. *)
 
 print_string "Moved to publication.\n" ;;
@@ -249,5 +270,7 @@ Exercise 12: Finally, make sure that firing the publish event prints
 out the headlines. You should see the headlines printed after
 the line above. 
 ......................................................................*)
+
+let _ = WEvent.fire_event publish () ;;
 
 (* .. *)
